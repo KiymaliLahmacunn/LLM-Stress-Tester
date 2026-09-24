@@ -1,0 +1,1165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Stress Test Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: rgba(0, 0, 0, 0.2); border-radius: 10px; }
+        ::-webkit-scrollbar-thumb { background: rgba(100, 116, 139, 0.5); border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: rgba(100, 116, 139, 0.8); }
+
+        body {
+            background-color: #050505;
+            background-image: 
+                radial-gradient(at 0% 0%, hsla(253,16%,7%,1) 0, transparent 50%), 
+                radial-gradient(at 50% 0%, hsla(225,39%,30%,0.1) 0, transparent 50%), 
+                radial-gradient(at 100% 0%, hsla(339,49%,30%,0.1) 0, transparent 50%);
+            background-attachment: fixed;
+            color: #e2e8f0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        .glass-panel {
+            background: rgba(17, 24, 39, 0.6);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+
+        /* Toggles */
+        .toggle-checkbox:checked { right: 0; border-color: #06b6d4; }
+        .toggle-checkbox:checked + .toggle-label { background-color: #06b6d4; }
+        
+        .pulse-glow {
+            box-shadow: 0 0 15px rgba(6, 182, 212, 0.4);
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0% { box-shadow: 0 0 15px rgba(6, 182, 212, 0.4); }
+            50% { box-shadow: 0 0 25px rgba(6, 182, 212, 0.7); }
+            100% { box-shadow: 0 0 15px rgba(6, 182, 212, 0.4); }
+        }
+
+        .terminal-log {
+            font-family: 'Courier New', Courier, monospace;
+            background: #000;
+            color: #0f0;
+            border: 1px solid #333;
+        }
+
+        .loader {
+            border-top-color: #06b6d4;
+            -webkit-animation: spinner 1.5s linear infinite;
+            animation: spinner 1.5s linear infinite;
+        }
+        @keyframes spinner {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body class="h-screen w-screen overflow-hidden flex flex-col">
+
+    <!-- Top Navigation -->
+    <header class="h-16 flex-shrink-0 glass-panel border-b-0 border-white/10 flex items-center justify-between px-6 z-20">
+        <div class="flex items-center gap-3">
+            <div class="w-8 h-8 rounded bg-gradient-to-br from-cyan-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-cyan-500/20">
+                <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+            </div>
+            <h1 class="text-xl font-bold tracking-tight text-white">AI Stress <span class="text-cyan-400 font-light">Test</span></h1>
+        </div>
+        
+        <!-- Tabs -->
+        <div class="flex gap-1 bg-gray-900/50 p-1 rounded-lg border border-gray-700/50">
+            <button onclick="switchTab('test')" id="tab-btn-test" class="px-4 py-1.5 rounded-md text-sm font-medium bg-gray-800 text-cyan-400 shadow transition-all">Dashboard</button>
+            <button onclick="switchTab('results'); loadResults();" id="tab-btn-results" class="px-4 py-1.5 rounded-md text-sm font-medium text-gray-400 hover:text-gray-200 transition-all">Analysis & Reports</button>
+            <button onclick="switchTab('datasets'); loadDatasetsTab();" id="tab-btn-datasets" class="px-4 py-1.5 rounded-md text-sm font-medium text-gray-400 hover:text-gray-200 transition-all">Datasets</button>
+        </div>
+    </header>
+
+    <!-- Main Content Area -->
+    <main class="flex-1 relative overflow-hidden flex">
+        
+        <!-- ======================= DASHBOARD TAB ======================= -->
+        <div id="tab-test" class="absolute inset-0 flex flex-col lg:flex-row gap-4 p-4 lg:p-6 transition-opacity duration-300">
+            
+            <!-- Left Panel: Configuration -->
+            <div class="lg:w-1/3 flex flex-col gap-4">
+                
+                <!-- Target Endpoint -->
+                <div class="glass-panel rounded-xl p-5 flex flex-col">
+                    <div class="flex justify-between items-center mb-4">
+                        <h2 class="text-sm font-semibold text-gray-300 uppercase tracking-wider flex items-center gap-2">
+                            <svg class="w-4 h-4 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9"></path></svg>
+                            Target Configuration
+                        </h2>
+
+                    </div>
+                    
+                    <div class="space-y-4">
+                        <div>
+                            <div class="flex justify-between items-center mb-1">
+                                <label class="block text-xs font-medium text-gray-400">API Endpoint URL</label>
+                                <div id="conn-status" class="text-xs text-gray-500 flex items-center gap-1 font-medium transition-colors">
+                                    <span class="w-2 h-2 rounded-full bg-gray-600 shadow-[0_0_5px_rgba(156,163,175,0.5)]" id="conn-dot"></span> 
+                                    <span id="conn-text">Waiting</span>
+                                </div>
+                            </div>
+                            <div class="flex gap-2">
+                                <input type="text" id="custom-url" value="http://127.0.0.1:1234/v1/chat/completions" class="flex-1 bg-gray-900/80 border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-200 focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-all placeholder-gray-600">
+                                <button onclick="testConnection()" class="bg-gray-800 hover:bg-gray-700 border border-gray-600 text-gray-300 px-3 py-2 rounded-lg text-sm transition-colors whitespace-nowrap shadow-sm hover:shadow-cyan-900/20 hover:border-cyan-700/50">Test</button>
+                            </div>
+                        </div>
+                        <div class="flex space-x-4">
+                            <div class="flex-1">
+                                <label class="block text-xs font-medium text-gray-400 mb-1">Model Name / ID</label>
+                                <input type="text" id="custom-model-name" value="Qwen3.5-0.5B" class="w-full bg-gray-900/80 border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-200 focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-all">
+                            </div>
+                            <div class="flex-1">
+                                <label class="block text-xs font-medium text-gray-400 mb-1">Hardware (Server)</label>
+                                <input type="text" id="custom-hardware" value="" placeholder="Loading..." class="w-full bg-gray-900/80 border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-200 focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-all">
+                            </div>
+                        </div>                        
+                        <!-- Concurrency & RPS -->
+                        <div class="flex space-x-4 mb-4">
+                            <div class="flex-1">
+                                <label class="block text-xs font-medium text-gray-400 mb-1">Concurrency (Threads)</label>
+                                <input type="number" id="concurrency" min="1" max="50" value="1" class="w-full bg-gray-900/80 border border-gray-700 rounded-lg px-3 py-2 text-sm text-cyan-300 font-medium focus:outline-none focus:border-cyan-500 text-center">
+                            </div>
+                            <div class="flex-1">
+                                <label class="block text-xs font-medium text-gray-400 mb-1">RPS (Req/Sec)</label>
+                                <input type="number" id="rps" min="1" max="100" value="1" class="w-full bg-gray-900/80 border border-gray-700 rounded-lg px-3 py-2 text-sm text-cyan-300 font-medium focus:outline-none focus:border-cyan-500 text-center">
+                            </div>
+                        </div>
+
+                        <div class="flex space-x-4 mb-4">
+                            <div class="flex-1">
+                                <label class="block text-xs font-medium text-gray-400 mb-1">Test Duration (Seconds)</label>
+                                <input type="number" id="duration" min="1" value="60" class="w-full bg-gray-900/80 border border-gray-700 rounded-lg px-3 py-2 text-sm text-cyan-300 font-medium focus:outline-none focus:border-cyan-500 text-center">
+                            </div>
+                            <div class="flex-1">
+                                <label class="block text-xs font-medium text-gray-400 mb-1">Request Timeout (s)</label>
+                                <input type="number" id="timeout" min="1" value="30" class="w-full bg-gray-900/80 border border-gray-700 rounded-lg px-3 py-2 text-sm text-cyan-300 font-medium focus:outline-none focus:border-cyan-500 text-center">
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="flex items-center gap-2 text-xs font-medium text-gray-400 mb-1 cursor-pointer">
+                                <input type="checkbox" id="seed-toggle" class="form-checkbox text-cyan-500 rounded border-gray-700 bg-gray-900" onchange="document.getElementById('seed-value').disabled = !this.checked">
+                                Use Seed (Deterministic)
+                            </label>
+                            <input type="number" id="seed-value" value="42" disabled class="w-full bg-gray-900/80 border border-gray-700 rounded-lg px-3 py-2 text-sm text-cyan-300 font-medium focus:outline-none focus:border-cyan-500 text-center disabled:opacity-50 disabled:cursor-not-allowed">
+                        </div>
+
+                        <hr class="border-gray-800 my-2">
+
+                        <!-- Dataset -->
+                        <div>
+                            <label class="block text-xs font-medium text-gray-400 mb-1">Dataset</label>
+                            <div class="flex gap-2">
+                                <select id="dataset-select" class="flex-1 bg-gray-900/80 border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-200 focus:outline-none focus:border-cyan-500 appearance-none">
+                                </select>
+                                <button onclick="downloadDataset()" class="px-3 bg-gray-800 hover:bg-gray-700 border border-gray-700 rounded-lg text-indigo-400 transition-colors" title="Download selected dataset">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                                </button>
+                                <label class="px-3 bg-gray-800 hover:bg-gray-700 border border-gray-700 rounded-lg text-cyan-400 transition-colors flex items-center cursor-pointer" title="Upload new dataset">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
+                                    <input type="file" id="dataset-upload" accept=".csv, .xlsx" class="hidden" onchange="uploadDataset(event)">
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- Toggles -->
+                        <div class="space-y-3 pt-2">
+                            <label class="flex items-center justify-between cursor-pointer group">
+                                <span class="text-sm font-medium text-gray-300 group-hover:text-white transition-colors">Thinking/Reasoning Mode</span>
+                                <div class="relative inline-block w-10 mr-2 align-middle select-none transition duration-200 ease-in">
+                                    <input type="checkbox" id="thinking-mode" class="toggle-checkbox absolute block w-5 h-5 rounded-full bg-white border-4 border-gray-600 appearance-none cursor-pointer transition-all duration-300 z-10"/>
+                                    <label class="toggle-label block overflow-hidden h-5 rounded-full bg-gray-600 cursor-pointer transition-colors duration-300"></label>
+                                </div>
+                            </label>
+
+                            <label class="flex items-center justify-between cursor-pointer group">
+                                <span class="text-sm font-medium text-gray-300 group-hover:text-white transition-colors">Streaming (Measure TTFT)</span>
+                                <div class="relative inline-block w-10 mr-2 align-middle select-none transition duration-200 ease-in">
+                                    <input type="checkbox" id="streaming-mode" class="toggle-checkbox absolute block w-5 h-5 rounded-full bg-white border-4 border-gray-600 appearance-none cursor-pointer transition-all duration-300 z-10"/>
+                                    <label class="toggle-label block overflow-hidden h-5 rounded-full bg-gray-600 cursor-pointer transition-colors duration-300"></label>
+                                </div>
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <button id="btn-start" onclick="toggleTest()" class="w-full mt-4 py-3.5 rounded-lg text-sm font-bold tracking-widest text-white bg-gradient-to-r from-cyan-600 to-indigo-600 hover:from-cyan-500 hover:to-indigo-500 transition-all uppercase shadow-lg hover:shadow-cyan-500/30">
+                        START STRESS TEST
+                    </button>
+                </div>
+            </div>
+
+            <!-- Right Panel: Telemetry & Logs -->
+            <div class="lg:w-2/3 flex flex-col gap-4 min-w-0">
+                
+                <!-- Telemetry Stats Grid -->
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4 flex-shrink-0">
+                    <div class="glass-panel rounded-xl p-4 flex flex-col justify-center items-center">
+                        <div class="text-xs text-gray-400 mb-1 uppercase tracking-wider font-semibold">Active Users</div>
+                        <div id="stat-active" class="text-3xl font-bold text-white">0</div>
+                    </div>
+                    <div class="glass-panel rounded-xl p-4 flex flex-col justify-center items-center">
+                        <div class="text-xs text-gray-400 mb-1 uppercase tracking-wider font-semibold">Total Requests</div>
+                        <div id="stat-total" class="text-3xl font-bold text-white">0</div>
+                    </div>
+                    <div class="glass-panel rounded-xl p-4 flex flex-col justify-center items-center border-b-2 border-emerald-500/50">
+                        <div class="text-xs text-emerald-400 mb-1 uppercase tracking-wider font-semibold">Success</div>
+                        <div id="stat-success" class="text-3xl font-bold text-white">0</div>
+                    </div>
+                    <div class="glass-panel rounded-xl p-4 flex flex-col justify-center items-center border-b-2 border-rose-500/50">
+                        <div class="text-xs text-rose-400 mb-1 uppercase tracking-wider font-semibold">Failed</div>
+                        <div id="stat-failed" class="text-3xl font-bold text-white">0</div>
+                    </div>
+                </div>
+
+                <!-- Main Telemetry Content (Chart + Logs) -->
+                <div class="glass-panel rounded-xl p-5 flex-1 flex flex-col min-h-0 relative">
+                    
+                    <!-- Progress Bar (Absolute Top) -->
+                    <div class="absolute top-0 left-0 right-0 h-1 bg-gray-800 rounded-t-xl overflow-hidden">
+                        <div id="progress-bar" class="h-full bg-cyan-500 w-0 transition-all duration-300"></div>
+                    </div>
+
+                    <div class="flex justify-between items-center mb-4 mt-2">
+                        <h2 class="text-sm font-semibold text-gray-300 uppercase tracking-wider flex items-center gap-2">
+                            <svg class="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z"></path></svg>
+                            Live Telemetry
+                        </h2>
+                        
+                        <div class="flex gap-2">
+                            <div class="px-3 py-1 bg-gray-900 rounded-lg text-xs font-mono text-cyan-400 border border-gray-700">
+                                RPS: <span id="stat-rps">0.00</span>
+                            </div>
+                            <div class="px-3 py-1 bg-gray-900 rounded-lg text-xs font-mono text-indigo-400 border border-gray-700">
+                                TPS: <span id="stat-tps">0.00</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Chart Container -->
+                    <div class="h-48 mb-4 flex-shrink-0 relative">
+                        <canvas id="liveChart"></canvas>
+                        <!-- Status Overlay -->
+                        <div id="test-status-overlay" class="absolute inset-0 flex items-center justify-center bg-gray-900/40 backdrop-blur-sm rounded-lg opacity-100 transition-opacity z-10">
+                            <div class="text-gray-400 font-mono text-sm tracking-widest uppercase flex items-center gap-2 bg-gray-800/80 px-4 py-2 rounded-lg border border-gray-700 shadow-xl">
+                                <span id="test-status-text">SYSTEM IDLE</span>
+                                <div id="test-status-spinner" class="w-4 h-4 border-2 border-gray-400 border-t-transparent rounded-full hidden loader"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Split Terminal Logs -->
+                    <div class="flex-1 flex gap-2 min-h-0">
+                        <!-- Left Terminal: Outgoing Commands -->
+                        <div class="flex-1 terminal-log rounded-lg p-3 overflow-y-auto text-xs shadow-inner flex flex-col relative" id="log-container-left">
+                            <div class="sticky top-0 bg-[#000] border-b border-[#333] pb-1 mb-2 text-[#666] flex justify-between z-10">
+                                <span>> OUTGOING_COMMANDS (PROMPTS)</span>
+                                <button onclick="document.getElementById('log-content-left').innerHTML=''" class="hover:text-red-400 transition-colors">CLEAR</button>
+                            </div>
+                            <div id="log-content-left" class="flex-1 whitespace-pre-wrap leading-relaxed pb-4"></div>
+                        </div>
+
+                        <!-- Right Terminal: API Responses -->
+                        <div class="flex-1 terminal-log rounded-lg p-3 overflow-y-auto text-xs shadow-inner flex flex-col relative" id="log-container-right">
+                            <div class="sticky top-0 bg-[#000] border-b border-[#333] pb-1 mb-2 text-[#666] flex justify-between z-10">
+                                <span>> INCOMING_RESPONSES (API)</span>
+                                <button onclick="document.getElementById('log-content-right').innerHTML=''" class="hover:text-red-400 transition-colors">CLEAR</button>
+                            </div>
+                            <div id="log-content-right" class="flex-1 whitespace-pre-wrap leading-relaxed pb-4"></div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+
+        <!-- ======================= ANALYSIS TAB ======================= -->
+        <div id="tab-results" class="absolute inset-0 flex flex-col gap-4 p-4 lg:p-6 opacity-0 pointer-events-none transition-opacity duration-300 overflow-hidden">
+            
+            <div class="glass-panel rounded-xl p-5 flex-1 flex flex-col min-h-0">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-sm font-semibold text-gray-300 uppercase tracking-wider flex items-center gap-2">
+                        <svg class="w-4 h-4 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                        Test Reports
+                    </h2>
+                    <div class="flex gap-2">
+                        <button onclick="compareSelected()" class="px-3 py-1.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 rounded text-white text-sm shadow transition-colors font-medium">
+                            Compare
+                        </button>
+                        <button onclick="deleteSelected()" class="px-3 py-1.5 bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500 rounded text-white text-sm shadow transition-colors font-medium">
+                            Delete Selected
+                        </button>
+                        <button onclick="loadResults()" class="p-1.5 bg-gray-800 hover:bg-gray-700 rounded text-cyan-400 transition-colors border border-gray-700" title="Refresh">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="overflow-x-auto flex-1 border border-gray-800 rounded-lg bg-gray-900/50 shadow-inner">
+                    <table class="w-full text-left text-sm text-gray-300 border-collapse">
+                        <thead class="text-xs text-gray-400 uppercase bg-gray-800 sticky top-0 border-b border-gray-700 z-10">
+                                <tr>
+                                    <th class="px-4 py-3 w-10 text-center"></th>
+                                    <th class="px-4 py-3">Model</th>
+                                    <th class="px-4 py-3">Hardware</th>
+                                    <th class="px-4 py-3">Dataset</th>
+                                    <th class="px-4 py-3 text-center">Thinking</th>
+                                    <th class="px-4 py-3 text-center">Streaming</th>
+                                    <th class="px-4 py-3 text-center">Seed</th>
+                                    <th class="px-4 py-3 text-right">Date/Time</th>
+                                    <th class="px-4 py-3 text-right">Actions</th>
+                                </tr>
+                            </thead>
+                        <tbody id="results-tbody" class="divide-y divide-gray-800/50">
+                            <!-- Rows injected by JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- ======================= DATASETS TAB ======================= -->
+        <div id="tab-datasets" class="absolute inset-0 flex flex-col gap-4 p-4 lg:p-6 opacity-0 pointer-events-none transition-opacity duration-300 overflow-hidden">
+            <div class="glass-panel rounded-xl p-5 flex-1 flex flex-col min-h-0">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-sm font-semibold text-gray-300 uppercase tracking-wider flex items-center gap-2">
+                        <svg class="w-4 h-4 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2 1.5 3 3 3h10c1.5 0 3-1 3-3V7c0-2-1.5-3-3-3H7C5.5 4 4 5 4 7zm0 0l8 5 8-5M12 12v9"></path></svg>
+                        Manage Datasets
+                    </h2>
+                    <label class="px-4 py-2 bg-gradient-to-r from-cyan-600 to-indigo-600 hover:from-cyan-500 hover:to-indigo-500 rounded text-white text-sm cursor-pointer shadow-lg hover:shadow-cyan-500/30 transition-all font-semibold uppercase tracking-wider inline-flex items-center gap-2">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                        Upload Dataset
+                        <input type="file" id="dataset-upload-tab" accept=".csv, .xlsx" class="hidden" onchange="uploadDatasetTab(event)">
+                    </label>
+                </div>
+                
+                <div class="overflow-x-auto flex-1 border border-gray-800 rounded-lg bg-gray-900/50 shadow-inner">
+                    <table class="w-full text-left text-sm text-gray-300 border-collapse">
+                        <thead class="text-xs text-gray-400 uppercase bg-gray-800 sticky top-0 border-b border-gray-700 z-10">
+                            <tr>
+                                <th class="px-4 py-3">Dataset Name</th>
+                                <th class="px-4 py-3">Rows</th>
+                                <th class="px-4 py-3">Created At</th>
+                                <th class="px-4 py-3">Updated At</th>
+                                <th class="px-4 py-3 text-right">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="datasets-tbody" class="divide-y divide-gray-800/50">
+                            <!-- Rows injected by JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Javascript Application Logic -->
+    <script>
+        // --- Tab Switching ---
+        function switchTab(tabId) {
+            const tabs = ['test', 'results', 'datasets'];
+            
+            tabs.forEach(t => {
+                const tabEl = document.getElementById('tab-' + t);
+                const btnEl = document.getElementById('tab-btn-' + t);
+                if (tabEl) {
+                    tabEl.classList.remove('opacity-100', 'pointer-events-auto');
+                    tabEl.classList.add('opacity-0', 'pointer-events-none');
+                }
+                if (btnEl) {
+                    btnEl.className = 'px-4 py-1.5 rounded-md text-sm font-medium text-gray-400 hover:text-gray-200 transition-all';
+                }
+            });
+            
+            const activeClass = 'px-4 py-1.5 rounded-md text-sm font-medium bg-gray-800 text-cyan-400 shadow transition-all';
+            
+            setTimeout(() => {
+                const targetTab = document.getElementById('tab-' + tabId);
+                const targetBtn = document.getElementById('tab-btn-' + tabId);
+                if (targetTab) {
+                    targetTab.classList.remove('opacity-0', 'pointer-events-none');
+                    targetTab.classList.add('opacity-100', 'pointer-events-auto');
+                }
+                if (targetBtn) {
+                    targetBtn.className = activeClass;
+                }
+            }, 50);
+        }
+        
+
+
+        // --- Dataset Management ---
+        async function fetchDatasets(selectedFilename = null) {
+            try {
+                const res = await fetch('/api/datasets');
+                const data = await res.json();
+                const sel = document.getElementById('dataset-select');
+                sel.innerHTML = '';
+                if (!data.datasets || data.datasets.length === 0) {
+                    sel.innerHTML = '<option value="">No datasets found</option>';
+                    return;
+                }
+                data.datasets.forEach(d => {
+                    const opt = document.createElement('option');
+                    opt.value = d.name; // Now returns objects
+                    opt.textContent = d.name;
+                    sel.appendChild(opt);
+                });
+                if (selectedFilename) sel.value = selectedFilename;
+            } catch (e) {
+                console.error("Failed to load datasets:", e);
+            }
+        }
+
+        async function loadDatasetsTab() {
+            try {
+                const res = await fetch('/api/datasets');
+                const data = await res.json();
+                const tbody = document.getElementById('datasets-tbody');
+                tbody.innerHTML = '';
+                if (!data.datasets || data.datasets.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="5" class="px-4 py-8 text-center text-gray-500">No datasets found</td></tr>';
+                    return;
+                }
+                
+                data.datasets.forEach(d => {
+                    const tr = document.createElement('tr');
+                    tr.className = "hover:bg-gray-800/50 transition-colors";
+                    tr.innerHTML = `
+                        <td class="px-4 py-3 font-medium text-cyan-400">${d.name}</td>
+                        <td class="px-4 py-3">${d.row_count !== undefined ? d.row_count : '-'}</td>
+                        <td class="px-4 py-3">${d.created_at ? new Date(d.created_at).toLocaleString() : '-'}</td>
+                        <td class="px-4 py-3">${d.updated_at ? new Date(d.updated_at).toLocaleString() : '-'}</td>
+                        <td class="px-4 py-3 text-right">
+                            <button onclick="downloadDataset('${d.name}')" class="px-2 py-1 bg-gray-800 hover:bg-gray-700 rounded text-indigo-400 mr-2 border border-gray-700">Download</button>
+                            <button onclick="deleteDataset('${d.name}')" class="px-2 py-1 bg-gray-800 hover:bg-red-900/50 rounded text-red-400 border border-gray-700">Delete</button>
+                        </td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            } catch (e) {
+                console.error("Failed to load datasets tab:", e);
+            }
+        }
+
+        async function deleteDataset(filename) {
+            if (!confirm('Are you sure you want to delete this dataset? This cannot be undone.')) return;
+            try {
+                const res = await fetch(`/api/datasets/delete/${encodeURIComponent(filename)}`, { method: 'DELETE' });
+                const data = await res.json();
+                if (data.error) alert(data.error);
+                else {
+                    loadDatasetsTab();
+                    fetchDatasets();
+                }
+            } catch(e) {
+                alert("Delete failed: " + e);
+            }
+        }
+
+        async function doUpload(file) {
+            if (!file) return;
+            // check size < 10MB
+            if (file.size > 10 * 1024 * 1024) {
+                alert("File exceeds 10MB limit.");
+                return;
+            }
+            const formData = new FormData();
+            formData.append('file', file);
+            try {
+                const res = await fetch('/api/datasets/upload', { method: 'POST', body: formData });
+                const data = await res.json();
+                if (data.error) alert(data.error);
+                else {
+                    await fetchDatasets(data.filename);
+                    if (document.getElementById('tab-datasets').classList.contains('opacity-100')) {
+                        loadDatasetsTab();
+                    }
+                }
+            } catch(err) {
+                alert("Upload failed: " + err);
+            }
+        }
+
+        async function uploadDataset(e) {
+            const file = e.target.files[0];
+            await doUpload(file);
+            e.target.value = '';
+        }
+
+        async function uploadDatasetTab(e) {
+            const file = e.target.files[0];
+            await doUpload(file);
+            e.target.value = '';
+        }
+
+        function downloadDataset(overrideFilename = null) {
+            let dsFilename = overrideFilename;
+            if (typeof overrideFilename !== 'string') {
+                dsFilename = document.getElementById('dataset-select').value;
+            }
+            if (!dsFilename) return alert("No dataset selected.");
+            window.location.href = `/api/datasets/download/${encodeURIComponent(dsFilename)}`;
+        }
+
+        // --- Live Chart Setup ---
+        const ctx = document.getElementById('liveChart').getContext('2d');
+        const liveChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: [],
+                datasets: [
+                    { label: 'Avg TTFT (ms)', data: [], borderColor: '#10b981', backgroundColor: 'rgba(16, 185, 129, 0.1)', borderWidth: 2, fill: true, pointRadius: 0, tension: 0.4 },
+                    { label: 'Avg Gen (ms)', data: [], borderColor: '#3b82f6', backgroundColor: 'transparent', borderWidth: 2, pointRadius: 0, tension: 0.4 },
+                    { label: 'Avg Total (ms)', data: [], borderColor: '#f43f5e', backgroundColor: 'transparent', borderWidth: 2, pointRadius: 0, tension: 0.4 }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                animation: false,
+                interaction: { intersect: false, mode: 'index' },
+                plugins: { legend: { display: true, labels: { color: '#9ca3af', boxWidth: 12, font: {size: 10} } } },
+                scales: {
+                    x: { display: false },
+                    y: { grid: { color: '#374151', borderDash: [2, 4] }, ticks: { color: '#9ca3af', font: {size: 10} }, beginAtZero: true }
+                }
+            }
+        });
+
+        // --- Test Control & Polling ---
+        let isTesting = false;
+        let statusInterval = null;
+        let lastLogLine = 0;
+
+        function updateUIState(running, progress = 0) {
+            isTesting = running;
+            const btn = document.getElementById('btn-start');
+            const overlay = document.getElementById('test-status-overlay');
+            const spinner = document.getElementById('test-status-spinner');
+            const statusTxt = document.getElementById('test-status-text');
+            const progBar = document.getElementById('progress-bar');
+            
+            if (running) {
+                btn.innerHTML = 'STOP TEST ABORT';
+                btn.className = "w-full mt-4 py-3.5 rounded-lg text-sm font-bold tracking-widest text-white bg-gradient-to-r from-red-600 to-rose-700 hover:from-red-500 hover:to-rose-600 transition-all uppercase shadow-lg shadow-red-500/20 pulse-glow";
+                
+                overlay.classList.remove('opacity-100');
+                overlay.classList.add('opacity-0', 'pointer-events-none');
+                progBar.style.width = Math.min(100, progress * 100) + '%';
+            } else {
+                btn.innerHTML = 'START STRESS TEST';
+                btn.className = "w-full mt-4 py-3.5 rounded-lg text-sm font-bold tracking-widest text-white bg-gradient-to-r from-cyan-600 to-indigo-600 hover:from-cyan-500 hover:to-indigo-500 transition-all uppercase shadow-lg hover:shadow-cyan-500/30";
+                
+                overlay.classList.remove('opacity-0', 'pointer-events-none');
+                overlay.classList.add('opacity-100');
+                spinner.classList.add('hidden');
+                statusTxt.innerText = 'SYSTEM IDLE';
+                progBar.style.width = '0%';
+            }
+        }
+
+        async function toggleTest() {
+            if (isTesting) {
+                if (!confirm('Are you sure you want to abort the running test?')) return;
+                await fetch('/api/test/stop', { method: 'POST' });
+                updateUIState(false);
+            } else {
+                const finalUrl = document.getElementById('custom-url').value.trim();
+                const finalName = document.getElementById('custom-model-name').value.trim() || "Custom";
+                const dsFilename = document.getElementById('dataset-select').value;
+                
+                if (!finalUrl || !dsFilename) return alert("Please enter a Target URL and select a Dataset.");
+
+                // Validate numeric inputs
+                const concurrencyVal = parseInt(document.getElementById("concurrency").value);
+                const rpsVal = parseInt(document.getElementById("rps").value);
+                const durationVal = parseInt(document.getElementById("duration").value);
+                const timeoutVal = parseInt(document.getElementById("timeout").value);
+                const useSeed = document.getElementById("seed-toggle").checked;
+                const seedRaw = document.getElementById("seed-value").value;
+                const seedVal = useSeed ? parseInt(seedRaw) : null;
+
+                if (isNaN(concurrencyVal) || concurrencyVal < 1 || concurrencyVal > 100) {
+                    return alert("Concurrency must be an integer between 1 and 100.");
+                }
+                if (isNaN(rpsVal) || rpsVal < 1 || rpsVal > 500) {
+                    return alert("RPS must be an integer between 1 and 500.");
+                }
+                if (isNaN(durationVal) || durationVal < 1 || durationVal > 7200) {
+                    return alert("Duration must be an integer between 1 and 7200 seconds.");
+                }
+                if (isNaN(timeoutVal) || timeoutVal < 5 || timeoutVal > 600) {
+                    return alert("Timeout must be an integer between 5 and 600 seconds.");
+                }
+                if (useSeed && (isNaN(seedVal))) {
+                    return alert("Seed must be a valid integer when enabled.");
+                }
+
+                document.getElementById('log-content-left').innerHTML = ''; document.getElementById('log-content-right').innerHTML = ''; // clear logs
+                lastLogLine = 0;
+                liveChart.data.labels = [];
+                liveChart.data.datasets.forEach(ds => ds.data = []);
+                liveChart.update();
+                
+                document.getElementById('test-status-text').innerText = 'INITIALIZING...';
+                document.getElementById('test-status-spinner').classList.remove('hidden');
+
+                const payload = {
+                    model_name: finalName,
+                    model_url: finalUrl,
+                    dataset_filename: dsFilename,
+                    concurrency: concurrencyVal,
+                    rps: rpsVal,
+                    duration: durationVal,
+                    thinking: document.getElementById("thinking-mode").checked,
+                    streaming: document.getElementById("streaming-mode").checked,
+                    hardware: document.getElementById('custom-hardware') ? document.getElementById('custom-hardware').value : "",
+                    seed: seedVal,
+                    timeout: timeoutVal
+                };
+                
+                const res = await fetch('/api/test/start', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                
+                const data = await res.json();
+                if (data.error) {
+                    alert("Test Failed to Start: " + data.error);
+                    updateUIState(false);
+                    return;
+                }
+                
+                updateUIState(true, 0);
+                startStatusPolling();
+            }
+        }
+
+        function startStatusPolling() {
+            if (statusInterval) clearInterval(statusInterval);
+            statusInterval = setInterval(async () => {
+                try {
+                    const res = await fetch(`/api/test/status?last_log_idx=${lastLogLine}`);
+                    const data = await res.json();
+                    
+                    document.getElementById('stat-active').innerText = data.active_workers;
+                    document.getElementById('stat-total').innerText = data.total_requests;
+                    document.getElementById('stat-success').innerText = data.success_count;
+                    document.getElementById('stat-failed').innerText = data.fail_count;
+                    document.getElementById('stat-rps').innerText = data.avg_rps.toFixed(2);
+                    document.getElementById('stat-tps').innerText = data.avg_tps.toFixed(2);
+                    
+                    if (data.is_testing) {
+                        updateUIState(true, data.progress);
+                        liveChart.data.labels.push('');
+                        liveChart.data.datasets[0].data.push(data.avg_ttft_ms);
+                        liveChart.data.datasets[1].data.push(data.avg_generation_ms);
+                        liveChart.data.datasets[2].data.push(data.avg_total_ms);
+                        if (liveChart.data.labels.length > 30) {
+                            liveChart.data.labels.shift();
+                            liveChart.data.datasets.forEach(ds => ds.data.shift());
+                        }
+                        liveChart.update();
+                    } else {
+                        updateUIState(false);
+                        clearInterval(statusInterval);
+                        statusInterval = null;
+                    }
+                    
+                    if (data.new_logs && data.new_logs.length > 0) {
+                        const logLeft = document.getElementById('log-content-left');
+                        const logRight = document.getElementById('log-content-right');
+                        
+                        data.new_logs.forEach(line => {
+                            const div = document.createElement('div');
+                            div.textContent = line;
+                            div.className = "text-gray-300 mb-2 border-b border-gray-800 pb-1";
+                            
+                            if (line.includes(">>> PROMPT")) {
+                                div.className = "text-cyan-400 mb-2 border-b border-gray-800 pb-1";
+                                logLeft.appendChild(div);
+                            } else if (line.includes("--- RESPONSE")) {
+                                div.className = "mb-4 border-b border-gray-800 pb-2 font-mono text-[11px] leading-relaxed text-gray-300";
+                                
+                                let formatted = line.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+                                
+                                // Syntax highlighting mimicking LM Studio
+                                formatted = formatted.replace(/(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2})/g, '<span class="text-blue-400">$1</span>');
+                                formatted = formatted.replace(/\[DEBUG\]/g, '<span class="text-blue-500 font-bold">[DEBUG]</span>');
+                                formatted = formatted.replace(/\[INFO\]/g, '<span class="text-emerald-500 font-bold">[INFO]</span>');
+                                formatted = formatted.replace(/(\".*?\"):/g, '<span class="text-emerald-400">$1</span>:');
+                                formatted = formatted.replace(/: (\".*?\")/g, ': <span class="text-emerald-300">$1</span>');
+                                formatted = formatted.replace(/--- RESPONSE.*?---/, '<span class="text-gray-500 italic">$&</span>');
+                                
+                                div.innerHTML = formatted;
+                                logRight.appendChild(div);
+                            } else {
+                                div.className = "text-gray-500 italic mb-2";
+                                const div2 = div.cloneNode(true);
+                                logLeft.appendChild(div);
+                                logRight.appendChild(div2);
+                            }
+                        });
+                        lastLogLine = data.last_log_idx;
+                        const cLeft = document.getElementById('log-container-left');
+                        const cRight = document.getElementById('log-container-right');
+                        cLeft.scrollTop = cLeft.scrollHeight;
+                        cRight.scrollTop = cRight.scrollHeight;
+                    }
+                } catch (e) {
+                    console.error("Polling error", e);
+                }
+            }, 300);
+        }
+
+        // --- Results Loading ---
+        
+        
+        async function testConnection() {
+            const url = document.getElementById('custom-url').value;
+            const dot = document.getElementById('conn-dot');
+            const txt = document.getElementById('conn-text');
+            const stat = document.getElementById('conn-status');
+            
+            // Loading state
+            dot.className = "w-2 h-2 rounded-full bg-yellow-400 shadow-[0_0_8px_rgba(250,204,21,0.6)] animate-pulse";
+            txt.innerText = "Connecting...";
+            stat.className = "text-xs text-yellow-400 flex items-center gap-1 font-medium transition-colors";
+            
+            try {
+                const res = await fetch('/api/system/test_connection?url=' + encodeURIComponent(url));
+                const data = await res.json();
+                
+                if (data.status === "ok") {
+                    // Update Model name
+                    if (data.model) {
+                        const mInput = document.getElementById('custom-model-name');
+                        mInput.value = data.model;
+                        mInput.classList.add('ring-2', 'ring-emerald-500', 'border-emerald-500');
+                        setTimeout(() => {
+                            mInput.classList.remove('ring-2', 'ring-emerald-500', 'border-emerald-500');
+                        }, 800);
+                    }
+                    
+                    // Check prompt test result
+                    if (data.prompt_ok) {
+                        if (data.is_text_model) {
+                            // Full success: text-to-text model confirmed
+                            dot.className = "w-2 h-2 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.6)]";
+                            txt.innerHTML = 'Connected ✓ Prompt ✓ <span class="bg-emerald-500/20 text-emerald-300 px-1.5 py-0.5 rounded text-[10px] font-bold tracking-wider border border-emerald-500/30">TXT</span>';
+                            stat.className = "text-xs text-emerald-400 flex items-center gap-1 font-medium transition-colors";
+                        } else {
+                            // Prompt OK but model might not be pure text (embedding etc.)
+                            dot.className = "w-2 h-2 rounded-full bg-amber-400 shadow-[0_0_8px_rgba(245,158,11,0.6)]";
+                            txt.innerHTML = 'Connected ✓ <span class="bg-amber-500/20 text-amber-300 px-1.5 py-0.5 rounded text-[10px] font-bold tracking-wider border border-amber-500/30">TXT?</span>';
+                            stat.className = "text-xs text-amber-400 flex items-center gap-1 font-medium transition-colors";
+                        }
+                    } else {
+                        // Model found but prompt failed
+                        dot.className = "w-2 h-2 rounded-full bg-red-400 shadow-[0_0_8px_rgba(239,68,68,0.6)]";
+                        let errorMsg = "No response!";
+                        if (data.prompt_error) {
+                            errorMsg = data.prompt_error;
+                            console.warn("Prompt test error:", data.prompt_error);
+                        }
+                        txt.innerText = "Model found but error: " + errorMsg;
+                        stat.className = "text-xs text-red-400 flex items-center gap-1 font-medium transition-colors";
+                    }
+                    
+                    // Also update hardware automatically
+                    try {
+                        const hwRes = await fetch('/api/system/hardware');
+                        const hwData = await hwRes.json();
+                        if (hwData && hwData.hardware) {
+                            const hwInput = document.getElementById('custom-hardware');
+                            hwInput.value = hwData.hardware;
+                            hwInput.classList.add('ring-2', 'ring-emerald-500', 'border-emerald-500');
+                            setTimeout(() => {
+                                hwInput.classList.remove('ring-2', 'ring-emerald-500', 'border-emerald-500');
+                            }, 800);
+                        }
+                    } catch (e) {
+                        console.error("Hardware fetch failed:", e);
+                    }
+                    
+                } else {
+                    // Connection error
+                    dot.className = "w-2 h-2 rounded-full bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.6)]";
+                    txt.innerText = "Connection Error!";
+                    stat.className = "text-xs text-red-500 flex items-center gap-1 font-medium transition-colors";
+                    console.error(data.error);
+                }
+            } catch (err) {
+                dot.className = "w-2 h-2 rounded-full bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.6)]";
+                txt.innerText = "Server Error";
+                stat.className = "text-xs text-red-500 flex items-center gap-1 font-medium transition-colors";
+            }
+        }
+
+async function showReport(filename) {
+    const modal = document.getElementById('report-modal');
+    const loading = document.getElementById('report-loading');
+    const errDiv = document.getElementById('report-error');
+    const content = document.getElementById('report-content');
+    
+    document.getElementById('report-filename').innerText = decodeURIComponent(filename);
+    
+    modal.classList.remove('hidden');
+    loading.classList.remove('hidden');
+    errDiv.classList.add('hidden');
+    content.classList.add('hidden');
+    
+    try {
+        const res = await fetch('/api/results/report/' + filename);
+        const data = await res.json();
+        
+        if (data.error) {
+            errDiv.innerText = data.error;
+            errDiv.classList.remove('hidden');
+            loading.classList.add('hidden');
+            return;
+        }
+        
+        document.getElementById('rep-total').innerText = data.total_requests;
+        document.getElementById('rep-success').innerText = data.successful_requests;
+        document.getElementById('rep-failed').innerText = data.failed_requests;
+        
+        const durEl = document.getElementById('rep-duration');
+        if (durEl) {
+            durEl.innerText = (data.test_duration_sec !== undefined && data.test_duration_sec !== null) ? data.test_duration_sec : '-';
+        }
+        
+        const tbody = document.getElementById('report-tbody');
+        tbody.innerHTML = '';
+        
+        for (const [metric, stats] of Object.entries(data.metrics)) {
+            const tr = document.createElement('tr');
+            tr.className = "border-b border-gray-800/50 hover:bg-gray-800/30";
+            tr.innerHTML = `
+                <td class="p-3 font-medium text-gray-300">${metric}</td>
+                <td class="p-3 text-right text-gray-400">${stats.n_ok}</td>
+                <td class="p-3 text-right">${stats.mean}</td>
+                <td class="p-3 text-right">${stats.median}</td>
+                <td class="p-3 text-right text-gray-500">${stats.stdev}</td>
+                <td class="p-3 text-right text-emerald-400">${stats.min}</td>
+                <td class="p-3 text-right text-cyan-300 font-bold">${stats.p50}</td>
+                <td class="p-3 text-right text-purple-300 font-bold">${stats.p90}</td>
+                <td class="p-3 text-right text-pink-300 font-bold">${stats.p95}</td>
+                <td class="p-3 text-right text-red-300 font-bold">${stats.p99}</td>
+                <td class="p-3 text-right text-orange-400">${stats.max}</td>
+            `;
+            tbody.appendChild(tr);
+        }
+        
+        content.classList.remove('hidden');
+    } catch (err) {
+        errDiv.innerText = "Connection error: " + err.message;
+        errDiv.classList.remove('hidden');
+    } finally {
+        loading.classList.add('hidden');
+    }
+}
+
+async function loadResults() {
+    try {
+        const res = await fetch('/api/results');
+        const data = await res.json();
+        const tbody = document.getElementById('results-tbody');
+        tbody.innerHTML = '';
+        
+        if (data.files && data.files.length > 0) {
+            data.files.forEach(item => {
+                const dateObj = new Date(item.mtime * 1000);
+                const dateStr = dateObj.toLocaleString();
+                
+                let modelStr = item.meta && item.meta.model ? item.meta.model : "-";
+                let hwStr = item.meta && item.meta.hardware ? item.meta.hardware : "-";
+                let datasetStr = item.meta && item.meta.dataset ? item.meta.dataset : "-";
+                
+                let dsFile = datasetStr;
+                if (!dsFile.endsWith(".csv")) dsFile += ".csv";
+                
+                let thinkStr = item.meta && item.meta.thinking ? item.meta.thinking : "-";
+                let streamStr = item.meta && item.meta.streaming ? item.meta.streaming : "-";
+                
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-gray-800/50 transition-colors border-b border-gray-800 text-sm";
+                tr.innerHTML = `
+                    <td class="px-4 py-3 text-center">
+                        <input type="checkbox" class="compare-cb form-checkbox text-emerald-500 rounded border-gray-700 bg-gray-900" value="${item.name}">
+                    </td>
+                    <td class="px-4 py-3 font-medium text-cyan-300">${modelStr}</td>
+                    <td class="px-4 py-3 text-gray-400 text-xs">${hwStr}</td>
+                    <td class="px-4 py-3 text-gray-400">
+                        ${datasetStr}
+                        <br/>
+                        <button onclick="window.location.href='/api/datasets/download/' + encodeURIComponent('${dsFile}')" class="mt-1 text-xs text-blue-400 hover:text-blue-300 underline" title="Download dataset"> Download Dataset</button>
+                    </td>
+                    <td class="px-4 py-3 text-gray-400 text-center">${thinkStr === "On" ? '<span class="text-emerald-400">On</span>' : '<span class="text-gray-500">Off</span>'}</td>
+                    <td class="px-4 py-3 text-gray-400 text-center">${streamStr === "On" ? '<span class="text-emerald-400">On</span>' : '<span class="text-gray-500">Off</span>'}</td>
+                    <td class="px-4 py-3 text-gray-400 text-center">${item.meta && item.meta.seed !== undefined ? item.meta.seed : '-'}</td>
+                    <td class="px-4 py-3 text-gray-400 text-right">${dateStr}</td>
+                    <td class="px-4 py-3 text-right whitespace-nowrap">
+                        <button onclick="showReport('${encodeURIComponent(item.name)}')" class="px-3 py-1 bg-purple-600 hover:bg-purple-500 text-white rounded transition-colors mr-2">Report</button>
+                        <button onclick="window.location.href='/api/results/download/' + encodeURIComponent('${item.name}')" class="px-3 py-1 bg-blue-600 hover:bg-blue-500 text-white rounded transition-colors">Download</button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        } else {
+            tbody.innerHTML = '<tr><td colspan="9" class="text-center py-4 text-gray-500">No result files yet.</td></tr>';
+        }
+    } catch (err) {
+        console.error("Failed to load results", err);
+    }
+}
+
+async function compareSelected() {
+    const checkboxes = document.querySelectorAll('.compare-cb:checked');
+    const files = Array.from(checkboxes).map(cb => cb.value);
+    
+    if (files.length < 2) {
+        alert('Please select at least 2 result files to compare.');
+        return;
+    }
+    
+    const modal = document.getElementById('compare-modal');
+    const loading = document.getElementById('compare-loading');
+    const errDiv = document.getElementById('compare-error');
+    const content = document.getElementById('compare-content');
+    
+    modal.classList.remove('hidden');
+    loading.classList.remove('hidden');
+    errDiv.classList.add('hidden');
+    content.classList.add('hidden');
+    
+    try {
+        const res = await fetch('/api/compare', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ files })
+        });
+        const data = await res.json();
+        
+        if (data.error) {
+            errDiv.innerText = data.error;
+            errDiv.classList.remove('hidden');
+            loading.classList.add('hidden');
+            return;
+        }
+        
+        const tbody = document.getElementById('compare-tbody');
+        tbody.innerHTML = '';
+        
+        const thead = document.getElementById('compare-thead');
+        thead.innerHTML = '';
+        
+        if (data.comparisons.length === 0) {
+            errDiv.innerText = 'No valid Summary data found in the selected files.';
+            errDiv.classList.remove('hidden');
+            loading.classList.add('hidden');
+            return;
+        }
+
+        // Build Header Row (Files)
+        const headTr = document.createElement('tr');
+        headTr.className = 'bg-gray-800/50 text-gray-400 border-b border-gray-700';
+        headTr.innerHTML = '<th class="p-3 font-medium text-left">Metric - Stat</th>';
+        data.comparisons.forEach(comp => {
+            headTr.innerHTML += `<th class="p-3 font-medium text-right text-cyan-400">${comp.filename.replace('.xlsx', '')}</th>`;
+        });
+        thead.appendChild(headTr);
+
+        // Build Rows (Metric - Stat)
+        // Extract all unique metrics from the first file
+        const metrics = data.comparisons[0].rows.map(r => r[0]);
+        const statNames = data.comparisons[0].headers.slice(2); // Skip Metric and N
+        const statIndices = Array.from({length: statNames.length}, (_, i) => i + 2); // 2 to 10
+
+        metrics.forEach(metricName => {
+            // Group title
+            const groupTr = document.createElement('tr');
+            groupTr.className = 'bg-gray-800/80 border-b border-gray-700';
+            groupTr.innerHTML = `<td colspan="${data.comparisons.length + 1}" class="p-3 font-bold text-white">${metricName}</td>`;
+            tbody.appendChild(groupTr);
+
+            // Sub-rows for each stat
+            statIndices.forEach(idx => {
+                const statName = data.comparisons[0].headers[idx];
+                const tr = document.createElement('tr');
+                tr.className = 'border-b border-gray-800/50 hover:bg-gray-800/30';
+                let rowHtml = `<td class="p-3 pl-8 font-medium text-gray-400">${statName}</td>`;
+                
+                data.comparisons.forEach(comp => {
+                    const rowData = comp.rows.find(r => r[0] === metricName);
+                    const val = rowData ? rowData[idx] : '-';
+                    rowHtml += `<td class="p-3 text-right text-gray-300">${val}</td>`;
+                });
+                
+                tr.innerHTML = rowHtml;
+                tbody.appendChild(tr);
+            });
+        });
+
+        loading.classList.add('hidden');
+        content.classList.remove('hidden');
+    } catch (err) {
+        errDiv.innerText = err.toString();
+        errDiv.classList.remove('hidden');
+        loading.classList.add('hidden');
+    }
+}
+
+async function deleteSelected() {
+    const checkboxes = document.querySelectorAll('.compare-cb:checked');
+    const files = Array.from(checkboxes).map(cb => cb.value);
+    
+    if (files.length === 0) {
+        alert('Please select at least 1 result file to delete.');
+        return;
+    }
+    
+    if (!confirm('Are you sure you want to delete the selected reports? This cannot be undone.')) {
+        return;
+    }
+    
+    try {
+        const res = await fetch('/api/results/delete', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ files })
+        });
+        const data = await res.json();
+        if (data.error) {
+            alert("Delete failed (partially or fully): " + data.error);
+        }
+        
+        // Reload results whether full success or partial
+        loadResults();
+        
+    } catch(e) {
+        alert("Delete failed: " + e);
+    }
+}
+
+// --- Init ---
+fetchDatasets();
+
+fetch('/api/system/hardware').then(r=>r.json()).then(data => {
+    if (data && data.hardware) {
+        const el = document.getElementById('custom-hardware');
+        if (el) el.value = data.hardware;
+    }
+}).catch(e => console.error(e));
+
+fetch('/api/test/status?last_log_idx=0').then(r => r.json()).then(data => {
+    if (data.is_testing) {
+        lastLogLine = data.last_log_idx;
+        updateUIState(true, data.progress);
+        startStatusPolling();
+    }
+});
+
+</script>
+    <!-- Report Modal -->
+    <div id="report-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm hidden flex items-center justify-center z-50">
+        <div class="bg-gray-900 border border-gray-700 rounded-lg shadow-2xl w-11/12 max-w-6xl max-h-[90vh] flex flex-col">
+            <div class="flex justify-between items-center p-4 border-b border-gray-800">
+                <h3 class="text-xl font-bold text-white">Statistical Analysis Report <span id="report-filename" class="text-sm font-normal text-gray-400 ml-2"></span></h3>
+                <button onclick="document.getElementById('report-modal').classList.add('hidden')" class="text-gray-400 hover:text-white">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+            </div>
+            <div class="p-4 overflow-y-auto flex-1">
+                <div id="report-loading" class="text-center py-10 text-cyan-400 hidden">Calculating... Please wait.</div>
+                <div id="report-error" class="text-center py-10 text-red-400 hidden"></div>
+                <div id="report-content" class="hidden">
+                    <div class="flex space-x-6 mb-6">
+                        <div class="bg-gray-800 p-4 rounded border border-gray-700 flex-1">
+                            <div class="text-gray-400 text-sm">Total Requests</div>
+                            <div id="rep-total" class="text-2xl text-white font-bold">0</div>
+                        </div>
+                        <div class="bg-gray-800 p-4 rounded border border-gray-700 flex-1">
+                            <div class="text-gray-400 text-sm">Successful</div>
+                            <div id="rep-success" class="text-2xl text-emerald-400 font-bold">0</div>
+                        </div>
+                        <div class="bg-gray-800 p-4 rounded border border-gray-700 flex-1">
+                            <div class="text-gray-400 text-sm">Failed</div>
+                            <div id="rep-failed" class="text-2xl text-red-400 font-bold">0</div>
+                        </div>
+                        <div class="bg-gray-800 p-4 rounded border border-gray-700 flex-1">
+                            <div class="text-gray-400 text-sm">Test Duration (s)</div>
+                            <div id="rep-duration" class="text-2xl text-cyan-400 font-bold">0</div>
+                        </div>
+                    </div>
+                    
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left border-collapse text-sm">
+                            <thead>
+                                <tr class="bg-gray-800/50 text-gray-400 border-b border-gray-700">
+                                    <th class="p-3 font-medium">Metric (Successful Only)</th>
+                                    <th class="p-3 font-medium text-right">N</th>
+                                    <th class="p-3 font-medium text-right">Mean</th>
+                                    <th class="p-3 font-medium text-right">Median</th>
+                                    <th class="p-3 font-medium text-right">StDev</th>
+                                    <th class="p-3 font-medium text-right">Min</th>
+                                    <th class="p-3 font-medium text-right text-cyan-300">p50</th>
+                                    <th class="p-3 font-medium text-right text-purple-300">p90</th>
+                                    <th class="p-3 font-medium text-right text-pink-300">p95</th>
+                                    <th class="p-3 font-medium text-right text-red-300">p99</th>
+                                    <th class="p-3 font-medium text-right">Max</th>
+                                </tr>
+                            </thead>
+                            <tbody id="report-tbody">
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Compare Modal (must be a sibling of report-modal, NOT nested inside it) -->
+    <div id="compare-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm hidden flex items-center justify-center z-50">
+        <div class="bg-gray-900 border border-gray-700 rounded-lg shadow-2xl w-11/12 max-w-6xl max-h-[90vh] flex flex-col">
+            <div class="flex justify-between items-center p-4 border-b border-gray-800">
+                <h3 class="text-xl font-bold text-white">Comparison Report</h3>
+                <button onclick="document.getElementById('compare-modal').classList.add('hidden')" class="text-gray-400 hover:text-white">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+            </div>
+            <div class="p-4 overflow-y-auto flex-1">
+                <div id="compare-loading" class="text-center py-10 text-cyan-400 hidden">Comparing...</div>
+                <div id="compare-error" class="text-center py-10 text-red-400 hidden"></div>
+                <div id="compare-content" class="hidden">
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left border-collapse text-sm">
+                            <thead id="compare-thead">
+                                <!-- Headers injected by JS -->
+                            </thead>
+                            <tbody id="compare-tbody">
+                                <!-- Rows injected by JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
