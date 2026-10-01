@@ -6,6 +6,8 @@ readme = "README.md"
 requires-python = ">=3.14"
 dependencies = [
     "fastapi>=0.141.1",
+    "httpx>=0.28.1",
+    "httpx-sse>=0.4.3",
     "numpy>=2.5.3",
     "openpyxl>=3.1.5",
     "pandas>=3.0.6",
@@ -13,6 +15,7 @@ dependencies = [
     "python-dotenv>=1.2.3",
     "python-multipart>=0.0.32",
     "requests>=2.34.2",
+    "tiktoken>=0.14.0",
     "uvicorn>=0.53.0",
 ]
 

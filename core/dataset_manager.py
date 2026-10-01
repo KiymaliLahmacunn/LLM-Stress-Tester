@@ -158,3 +158,15 @@ def delete_dataset(filename: str):
         os.remove(csv_path)
     if os.path.exists(json_path):
         os.remove(json_path)
+
+def get_dataset_preview(filename: str) -> list:
+    safe_name = _safe_filename(filename)
+    if not safe_name:
+        raise ValueError("Invalid filename")
+    
+    csv_path = os.path.join(DATASETS_DIR, safe_name)
+    if not os.path.exists(csv_path):
+        raise ValueError("Dataset not found")
+        
+    df = pd.read_csv(csv_path, sep=";", nrows=5)
+    return df.to_dict(orient="records")

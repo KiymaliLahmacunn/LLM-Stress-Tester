@@ -9,6 +9,7 @@ from core.config import apply_thinking_config
 
 
 def build_payload(
+    provider: str,
     model_name: str,
     question: str,
     thinking_enabled: bool,
@@ -16,22 +17,41 @@ def build_payload(
     seed: int = None,
 ) -> dict:
 
-    payload = {"model": model_name, "messages": [{"role": "user", "content": question}]}
-
-    if seed is not None:
-        payload["seed"] = seed
-
-    if streaming_enabled:
-        payload["stream"] = True
-        payload["stream_options"] = {"include_usage": True}
-
-    model_lower = model_name.lower()
-
-    if thinking_enabled:
-        apply_thinking_config(payload, model_lower, question)
+    if provider == "anthropic":
+        payload = {
+            "model": model_name,
+            "messages": [{"role": "user", "content": question}],
+            "max_tokens": 1024,
+        }
+        if streaming_enabled:
+            payload["stream"] = True
+        return payload
+    elif provider == "gemini":
+        payload = {
+            "contents": [{"parts": [{"text": question}]}],
+            "generationConfig": {
+                "maxOutputTokens": 1024,
+                "temperature": 0.7,
+            }
+        }
+        return payload
     else:
-        # Thinking OFF: fast, short, direct answers
-        payload["max_tokens"] = 512
-        payload["temperature"] = 0.7
+        # OpenAI format
+        payload = {"model": model_name, "messages": [{"role": "user", "content": question}]}
 
-    return payload
+        if seed is not None:
+            payload["seed"] = seed
+
+        if streaming_enabled:
+            payload["stream"] = True
+            payload["stream_options"] = {"include_usage": True}
+
+        model_lower = model_name.lower()
+
+        if thinking_enabled:
+            apply_thinking_config(payload, model_lower, question)
+        else:
+            payload["max_tokens"] = 512
+            payload["temperature"] = 0.7
+
+        return payload

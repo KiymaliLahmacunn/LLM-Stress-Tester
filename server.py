@@ -145,6 +145,16 @@ def delete_dataset_endpoint(filename: str):
         return {"error": str(e)}
 
 
+@app.get("/api/datasets/preview/{filename}")
+def preview_dataset(filename: str):
+    try:
+        from core.dataset_manager import get_dataset_preview
+        preview = get_dataset_preview(filename)
+        return {"preview": preview}
+    except Exception as e:
+        return {"error": str(e)}
+
+
 # ── Helpers ──────────────────────────────────────────────────────────────
 
 
@@ -163,6 +173,7 @@ def _safe_filename(filename: str) -> str | None:
 
 
 class StartTestRequest(BaseModel):
+    provider: str = "openai"
     model_name: str
     model_url: str
     dataset_filename: str
@@ -198,13 +209,14 @@ def start_test(req: StartTestRequest):
     if not final_url.startswith("http"):
         final_url = "http://" + final_url
 
-    if not any(x in final_url for x in ["/chat", "/completions", "/generate"]):
+    if not any(x in final_url for x in ["/chat", "/completions", "/generate", "/messages"]):
         if final_url.endswith("/v1") or final_url.endswith("/v1/"):
             final_url = final_url.rstrip("/") + "/chat/completions"
         else:
             final_url = final_url.rstrip("/") + "/v1/chat/completions"
 
     manager.configure_test(
+        req.provider,
         req.model_name,
         final_url,
         dataset_path,

@@ -66,7 +66,6 @@ def finalize_and_format_excel(
                         # Users can click the cell to read the full text in the formula bar.
                         cell.alignment = Alignment(vertical="top", wrap_text=False)
 
-        # Auto-adjust column widths (cap at 60 for readability)
         for col in ws.columns:
             # We skip long text columns when calculating max length to avoid super wide columns
             col_letter = get_column_letter(int(col[0].column or 1))
